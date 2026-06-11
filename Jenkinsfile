@@ -10,9 +10,6 @@ pipeline {
     }
 
     environment {
-        // Path to the GCP Service Account JSON key (Secret File credential)
-        GOOGLE_APPLICATION_CREDENTIALS = credentials('gcp-credentials')
-        
         // Pass project ID parameter to Terraform
         TF_VAR_project_id = "${params.PROJECT_ID}"
         TF_IN_AUTOMATION = 'true'
@@ -47,6 +44,9 @@ pipeline {
             when {
                 expression { params.RUN_BOOTSTRAP == true }
             }
+            environment {
+                GOOGLE_APPLICATION_CREDENTIALS = credentials('gcp-credentials')
+            }
             steps {
                 echo "Initializing and applying remote state bootstrap..."
                 dir("${env.BOOTSTRAP_DIR}") {
@@ -58,6 +58,9 @@ pipeline {
         }
 
         stage('Terraform Init') {
+            environment {
+                GOOGLE_APPLICATION_CREDENTIALS = credentials('gcp-credentials')
+            }
             steps {
                 echo "Initializing Terraform for ${params.ENVIRONMENT}..."
                 dir("${env.ENV_DIR}") {
@@ -76,6 +79,9 @@ pipeline {
         }
 
         stage('Terraform Plan') {
+            environment {
+                GOOGLE_APPLICATION_CREDENTIALS = credentials('gcp-credentials')
+            }
             steps {
                 echo "Generating Terraform plan..."
                 dir("${env.ENV_DIR}") {
@@ -98,6 +104,9 @@ pipeline {
         stage('Terraform Apply / Destroy') {
             when {
                 expression { params.ACTION == 'apply' || params.ACTION == 'destroy' }
+            }
+            environment {
+                GOOGLE_APPLICATION_CREDENTIALS = credentials('gcp-credentials')
             }
             steps {
                 echo "Applying Terraform changes..."
