@@ -5,6 +5,7 @@ pipeline {
         choice(name: 'ENVIRONMENT', choices: ['dev', 'prod'], description: 'Target environment for provisioning')
         choice(name: 'ACTION', choices: ['plan', 'apply', 'destroy'], description: 'Terraform action to perform')
         string(name: 'PROJECT_ID', defaultValue: 'india-times-482008', description: 'GCP Project ID to provision resources in')
+        string(name: 'GCP_CREDENTIALS_ID', defaultValue: 'USE_VM_METADATA', description: 'Jenkins Credential ID for GCP Service Account JSON key, or "USE_VM_METADATA" to use the VM instance service account')
         booleanParam(name: 'RUN_BOOTSTRAP', defaultValue: false, description: 'Provision the GCS remote state bucket first (usually run once)')
         booleanParam(name: 'AUTO_APPROVE', defaultValue: false, description: 'Automatically approve apply/destroy changes (not recommended for production)')
     }
@@ -46,7 +47,7 @@ pipeline {
             }
             steps {
                 echo "Initializing and applying remote state bootstrap..."
-                withCredentials([file(credentialsId: 'gcp-credentials', variable: 'GOOGLE_APPLICATION_CREDENTIALS')]) {
+                runWithGcpAuth {
                     dir("${env.BOOTSTRAP_DIR}") {
                         sh 'terraform init'
                         sh 'terraform plan -out=bootstrap.tfplan'
@@ -59,7 +60,7 @@ pipeline {
         stage('Terraform Init') {
             steps {
                 echo "Initializing Terraform for ${params.ENVIRONMENT}..."
-                withCredentials([file(credentialsId: 'gcp-credentials', variable: 'GOOGLE_APPLICATION_CREDENTIALS')]) {
+                runWithGcpAuth {
                     dir("${env.ENV_DIR}") {
                         sh 'terraform init'
                     }
@@ -79,7 +80,7 @@ pipeline {
         stage('Terraform Plan') {
             steps {
                 echo "Generating Terraform plan..."
-                withCredentials([file(credentialsId: 'gcp-credentials', variable: 'GOOGLE_APPLICATION_CREDENTIALS')]) {
+                runWithGcpAuth {
                     dir("${env.ENV_DIR}") {
                         sh 'terraform plan -out=tfplan'
                     }
@@ -104,7 +105,7 @@ pipeline {
             }
             steps {
                 echo "Applying Terraform changes..."
-                withCredentials([file(credentialsId: 'gcp-credentials', variable: 'GOOGLE_APPLICATION_CREDENTIALS')]) {
+                runWithGcpAuth {
                     dir("${env.ENV_DIR}") {
                         script {
                             if (params.ACTION == 'apply') {
@@ -131,6 +132,18 @@ pipeline {
         }
         failure {
             echo "Pipeline run failed. Please check the logs."
+        }
+    }
+}
+
+def runWithGcpAuth(Closure body) {
+    if (params.GCP_CREDENTIALS_ID == 'USE_VM_METADATA' || !params.GCP_CREDENTIALS_ID) {
+        echo "Using GCP VM instance metadata service account for authentication..."
+        body()
+    } else {
+        echo "Using Jenkins credential ID: ${params.GCP_CREDENTIALS_ID} for authentication..."
+        withCredentials([file(credentialsId: params.GCP_CREDENTIALS_ID, variable: 'GOOGLE_APPLICATION_CREDENTIALS')]) {
+            body()
         }
     }
 }
