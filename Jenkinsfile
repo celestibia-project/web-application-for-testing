@@ -10,9 +10,8 @@ pipeline {
     }
 
     environment {
-        // ID of the Jenkins Secret File credential containing the GCP Service Account Key JSON
-        GCP_CREDS_KEY = 'gcp-credentials'
-        GOOGLE_APPLICATION_CREDENTIALS = credentials("${GCP_CREDS_KEY}")
+        // Path to the GCP Service Account JSON key (Secret File credential)
+        GOOGLE_APPLICATION_CREDENTIALS = credentials('gcp-credentials')
         
         // Pass project ID parameter to Terraform
         TF_VAR_project_id = "${params.PROJECT_ID}"
@@ -50,7 +49,7 @@ pipeline {
             }
             steps {
                 echo "Initializing and applying remote state bootstrap..."
-                dir("${BOOTSTRAP_DIR}") {
+                dir("${env.BOOTSTRAP_DIR}") {
                     sh 'terraform init'
                     sh 'terraform plan -out=bootstrap.tfplan'
                     sh 'terraform apply -auto-approve bootstrap.tfplan'
@@ -61,7 +60,7 @@ pipeline {
         stage('Terraform Init') {
             steps {
                 echo "Initializing Terraform for ${params.ENVIRONMENT}..."
-                dir("${ENV_DIR}") {
+                dir("${env.ENV_DIR}") {
                     sh 'terraform init'
                 }
             }
@@ -70,7 +69,7 @@ pipeline {
         stage('Terraform Validate') {
             steps {
                 echo "Validating Terraform configuration..."
-                dir("${ENV_DIR}") {
+                dir("${env.ENV_DIR}") {
                     sh 'terraform validate'
                 }
             }
@@ -79,7 +78,7 @@ pipeline {
         stage('Terraform Plan') {
             steps {
                 echo "Generating Terraform plan..."
-                dir("${ENV_DIR}") {
+                dir("${env.ENV_DIR}") {
                     sh 'terraform plan -out=tfplan'
                 }
             }
@@ -102,7 +101,7 @@ pipeline {
             }
             steps {
                 echo "Applying Terraform changes..."
-                dir("${ENV_DIR}") {
+                dir("${env.ENV_DIR}") {
                     script {
                         if (params.ACTION == 'apply') {
                             sh 'terraform apply -auto-approve tfplan'
@@ -118,8 +117,8 @@ pipeline {
     post {
         always {
             echo "Cleaning up plan files and workspace..."
-            sh "rm -f ${ENV_DIR}/tfplan"
-            sh "rm -f ${BOOTSTRAP_DIR}/bootstrap.tfplan"
+            sh "rm -f ${env.ENV_DIR}/tfplan"
+            sh "rm -f ${env.BOOTSTRAP_DIR}/bootstrap.tfplan"
             cleanWs()
         }
         success {
