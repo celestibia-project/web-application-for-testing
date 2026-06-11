@@ -27,7 +27,13 @@ pipeline {
         stage('Checkout') {
             steps {
                 cleanWs()
-                checkout scm
+                checkout([$class: 'GitSCM', 
+                    branches: [[name: '*/main']], 
+                    userRemoteConfigs: [[
+                        url: 'https://github.com/celestibia-project/web-application-for-testing.git', 
+                        credentialsId: 'GitHub-creds'
+                    ]]
+                ])
             }
         }
 
