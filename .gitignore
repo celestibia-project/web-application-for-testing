@@ -12,3 +12,16 @@ override.tf.json
 *_override.tf.json
 .DS_Store
 
+# Ignore example variables files
+*.tfvars.example
+
+# Ignore CLI configuration files
+.terraformrc
+terraform.rc
+
+# Ignore editor and IDE directories/files
+.vscode/
+.idea/
+.history/
+*.swp
+

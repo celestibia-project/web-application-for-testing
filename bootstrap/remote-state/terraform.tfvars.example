@@ -1,4 +1,0 @@
-project_id            = "india-times-482008"
-region                = "us-central1"
-state_bucket_name     = "celestibia-automation-bucket-remote-state"
-state_bucket_location = "US"
