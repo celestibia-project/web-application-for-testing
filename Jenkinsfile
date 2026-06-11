@@ -44,27 +44,25 @@ pipeline {
             when {
                 expression { params.RUN_BOOTSTRAP == true }
             }
-            environment {
-                GOOGLE_APPLICATION_CREDENTIALS = credentials('gcp-credentials')
-            }
             steps {
                 echo "Initializing and applying remote state bootstrap..."
-                dir("${env.BOOTSTRAP_DIR}") {
-                    sh 'terraform init'
-                    sh 'terraform plan -out=bootstrap.tfplan'
-                    sh 'terraform apply -auto-approve bootstrap.tfplan'
+                withCredentials([file(credentialsId: 'gcp-credentials', variable: 'GOOGLE_APPLICATION_CREDENTIALS')]) {
+                    dir("${env.BOOTSTRAP_DIR}") {
+                        sh 'terraform init'
+                        sh 'terraform plan -out=bootstrap.tfplan'
+                        sh 'terraform apply -auto-approve bootstrap.tfplan'
+                    }
                 }
             }
         }
 
         stage('Terraform Init') {
-            environment {
-                GOOGLE_APPLICATION_CREDENTIALS = credentials('gcp-credentials')
-            }
             steps {
                 echo "Initializing Terraform for ${params.ENVIRONMENT}..."
-                dir("${env.ENV_DIR}") {
-                    sh 'terraform init'
+                withCredentials([file(credentialsId: 'gcp-credentials', variable: 'GOOGLE_APPLICATION_CREDENTIALS')]) {
+                    dir("${env.ENV_DIR}") {
+                        sh 'terraform init'
+                    }
                 }
             }
         }
@@ -79,13 +77,12 @@ pipeline {
         }
 
         stage('Terraform Plan') {
-            environment {
-                GOOGLE_APPLICATION_CREDENTIALS = credentials('gcp-credentials')
-            }
             steps {
                 echo "Generating Terraform plan..."
-                dir("${env.ENV_DIR}") {
-                    sh 'terraform plan -out=tfplan'
+                withCredentials([file(credentialsId: 'gcp-credentials', variable: 'GOOGLE_APPLICATION_CREDENTIALS')]) {
+                    dir("${env.ENV_DIR}") {
+                        sh 'terraform plan -out=tfplan'
+                    }
                 }
             }
         }
@@ -105,17 +102,16 @@ pipeline {
             when {
                 expression { params.ACTION == 'apply' || params.ACTION == 'destroy' }
             }
-            environment {
-                GOOGLE_APPLICATION_CREDENTIALS = credentials('gcp-credentials')
-            }
             steps {
                 echo "Applying Terraform changes..."
-                dir("${env.ENV_DIR}") {
-                    script {
-                        if (params.ACTION == 'apply') {
-                            sh 'terraform apply -auto-approve tfplan'
-                        } else if (params.ACTION == 'destroy') {
-                            sh 'terraform destroy -auto-approve'
+                withCredentials([file(credentialsId: 'gcp-credentials', variable: 'GOOGLE_APPLICATION_CREDENTIALS')]) {
+                    dir("${env.ENV_DIR}") {
+                        script {
+                            if (params.ACTION == 'apply') {
+                                sh 'terraform apply -auto-approve tfplan'
+                            } else if (params.ACTION == 'destroy') {
+                                sh 'terraform destroy -auto-approve'
+                            }
                         }
                     }
                 }
